@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Friend Meal Planner — runs on your laptop, powered by open-weight Gemma</title>
+<style>
+  :root { color-scheme: light dark; --acc: #2e7d32; }
+  body { font-family: system-ui, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+  h1 { font-size: 1.6rem; } h1 small { font-weight: normal; font-size: 1rem; opacity: .7; }
+  form { display: grid; gap: .6rem; grid-template-columns: 1fr 1fr; margin: 1rem 0; }
+  label { display: flex; flex-direction: column; font-size: .85rem; gap: .2rem; }
+  input, select { padding: .45rem; font-size: 1rem; }
+  .full { grid-column: 1 / -1; }
+  button { padding: .6rem 1.2rem; font-size: 1rem; background: var(--acc); color: #fff; border: 0; border-radius: 6px; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: wait; }
+  #status { font-size: .9rem; min-height: 1.4em; opacity: .8; }
+  #out { border: 1px solid #ccc; border-radius: 8px; padding: 1rem; margin-top: 1rem; white-space: normal; }
+  #out h2 { font-size: 1.15rem; color: var(--acc); }
+  .badge { display: inline-block; font-size: .75rem; background: #e8f5e9; color: #1b5e20; border-radius: 20px; padding: .1rem .6rem; }
+  @media (prefers-color-scheme: dark) { .badge { background: #1b3a24; color: #a5d6a7; } #out { border-color: #444; } }
+</style>
+</head>
+<body>
+<h1>🥗 Friend Meal Planner <small>for my roommate — 100% local</small></h1>
+<p><span class="badge">open-weight Gemma via Ollama</span> <span class="badge">no cloud</span> <span class="badge">no signup</span></p>
+<p id="health">Checking local model…</p>
+
+<form id="f">
+  <label>Friend's name <input name="name" value="" placeholder="e.g. Arjun"></label>
+  <label>Diet
+    <select name="diet"><option>Vegetarian</option><option>Vegan</option><option>Eggetarian</option><option>Non-vegetarian</option></select>
+  </label>
+  <label class="full">Allergies (comma separated) <input name="allergies" placeholder="e.g. peanuts, lactose"></label>
+  <label class="full">Dislikes <input name="dislikes" placeholder="e.g. bitter gourd"></label>
+  <label>Weekly budget (₹) <input name="budget" value="2000" inputmode="numeric"></label>
+  <label>Days <input name="days" value="7" inputmode="numeric"></label>
+  <label class="full">Goal <input name="goal" value="eat healthy on a budget"></label>
+  <button class="full" type="submit" id="go">Generate week plan ✨</button>
+</form>
+<p id="status"></p>
+<div id="out"><em>Your plan will stream here, generated on this laptop.</em></div>
+
+<script>
+const $ = id => document.getElementById(id);
+fetch('/api/health').then(r => r.json()).then(h => {
+  $('health').textContent = h.ok ? `✅ ${h.model} ready — everything stays on this machine.`
+    : `⚠️ Model '${h.model}' not found. Run: ollama pull ${h.model || 'gemma3:1b'}`;
+}).catch(() => { $('health').textContent = '⚠️ Cannot reach Ollama at localhost:11434 — is `ollama serve` running?'; });
+
+function md(src) {
+  return src
+    .replace(/^## (.*)$/gm, '<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^- (.*)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, m => '<ul>' + m + '</ul>')
+    .replace(/\n/g, '<br>');
+}
+$('f').addEventListener('submit', async e => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target).entries());
+  $('go').disabled = true; $('out').innerHTML = ''; $('status').textContent = 'Gemma is cooking… (streams token by token, ~30s)';
+  let buf = '';
+  try {
+    const res = await fetch('/api/plan', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+    if (!res.ok) throw new Error(await res.text());
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      $('out').innerHTML = md(buf);
+    }
+    $('status').textContent = 'Done — hand it to your friend! 🍽️';
+  } catch (err) { $('status').textContent = 'Error: ' + err.message; }
+  $('go').disabled = false;
+});
+</script>
+</body>
+</html>
