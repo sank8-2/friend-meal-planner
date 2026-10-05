@@ -2,7 +2,7 @@
 
 Built for the **Hacktoberfest Weekend Challenge: Build for a Friend** (DEV `#hf26challenge`).
 
-My roommate Arjun needed help eating high-protein vegetarian food on a ₹2000/week
+My roommate Nagaraj needed help eating high-protein vegetarian food on a ₹2000/week
 budget — while strictly avoiding peanuts and lactose. So I built him a meal planner
 that runs **entirely on his laptop**: no accounts, no API keys, no cloud, no data
 ever leaving the machine.
@@ -43,7 +43,7 @@ Env overrides: `PORT`, `OLLAMA_HOST`, `OLLAMA_MODEL`, `OLLAMA_NUM_GPU`
 
 ## Demo
 
-Fill in: name `Arjun`, diet `Vegetarian`, allergies `peanuts, lactose`,
+Fill in: name `Nagaraj`, diet `Vegetarian`, allergies `peanuts, lactose`,
 budget `₹2000` → a 7-day plan streams in (~40s on CPU), ending with the
 ⚠️ Allergy Check section.
 
